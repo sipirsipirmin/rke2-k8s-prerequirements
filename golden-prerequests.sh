@@ -1,3 +1,4 @@
+#!/bin/sh
 # file limits
 
 OPEN_FILE_LIMIT=1024000
@@ -25,9 +26,6 @@ overlay
 br_netfilter
 EOF"
 
-modprobe overlay
-modprobe br_netfilter
-
 # Setup required sysctl params, these persist across reboots.
 sh -c "cat <<EOF | tee /etc/sysctl.d/99-kubernetes-cri.conf
 net.bridge.bridge-nf-call-iptables  = 1
@@ -39,7 +37,7 @@ EOF"
 echo "Configure log rotation"
 touch /etc/logrotate.d/allcontainerlogs
 sh -c 'cat <<EOT >> /etc/logrotate.d/allcontainerlogs
-/var/lib/containers/*/*.log
+/var/log/containers/*.log
 {
 rotate 5
 daily
