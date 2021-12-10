@@ -18,11 +18,28 @@ root soft nproc $OPEN_FILE_LIMIT
 * soft nproc $OPEN_FILE_LIMIT
 EOT"
 
+# k8s & containerd 
+echo "Configure k8s&containerd prerequirements"
+sh -c "cat <<EOF | tee /etc/modules-load.d/containerd.conf
+overlay
+br_netfilter
+EOF"
+
+modprobe overlay
+modprobe br_netfilter
+
+# Setup required sysctl params, these persist across reboots.
+sh -c "cat <<EOF | tee /etc/sysctl.d/99-kubernetes-cri.conf
+net.bridge.bridge-nf-call-iptables  = 1
+net.ipv4.ip_forward                 = 1
+net.bridge.bridge-nf-call-ip6tables = 1
+EOF"
 
 # log rotation
+echo "Configure log rotation"
 touch /etc/logrotate.d/allcontainerlogs
 sh -c 'cat <<EOT >> /etc/logrotate.d/allcontainerlogs
-/var/lib/docker/containers/*/*.log
+/var/lib/containers/*/*.log
 {
 rotate 5
 daily
@@ -36,24 +53,13 @@ create 0644 root root
 }
 EOT'
 
-# rke2 prerequests
+# rke2 prerequirements
 
-sh -c "cat <<EOF | sudo tee /etc/modules-load.d/k8s.conf
+echo "Configure rke2 prerequirements"
+
+sh -c "cat <<EOF | tee /etc/modules-load.d/k8s.conf
 vm.panic_on_oom=0
 vm.overcommit_memory=1
 kernel.panic=10
 kernel.panic_on_oops=1
 EOF"
-#sudo useradd -r -c "etcd user" -s /sbin/nologin -M etcd -U ??
-
-# k8s prerequests
-
-sh -c "cat <<EOF | sudo tee /etc/modules-load.d/k8s.conf
-br_netfilter
-EOF"
-
-sh -c "cat <<EOF | sudo tee /etc/sysctl.d/k8s.conf
-net.bridge.bridge-nf-call-ip6tables = 1
-net.bridge.bridge-nf-call-iptables = 1
-EOF"
-sysctl --system
